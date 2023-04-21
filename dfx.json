@@ -1,0 +1,35 @@
+{
+  "canisters": {
+    "webgpt_ic_backend": {
+      "main": "src/webgpt_ic_backend/main.mo",
+      "type": "motoko"
+    },
+    "webgpt_ic_frontend": {
+      "dependencies": [
+        "webgpt_ic_backend"
+      ],
+      "frontend": {
+        "entrypoint": "src/webgpt_ic_frontend/src/index.html"
+      },
+      "source": [
+        "src/webgpt_ic_frontend/assets",
+        "dist/webgpt_ic_frontend/"
+      ],
+      "type": "assets"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "dfx": "0.11.2",
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    }
+  },
+  "version": 1
+}
