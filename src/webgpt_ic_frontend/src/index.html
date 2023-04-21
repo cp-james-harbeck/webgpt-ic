@@ -1,24 +1,139 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>webgpt_ic</title>
-    <base href="/" />
-    <link rel="icon" href="favicon.ico" />
-    <link type="text/css" rel="stylesheet" href="main.css" />
+    <title>WebGPU GPT Model Demo</title>
+    <script src="helpers.js"></script>
+    <script src="tokenizer.js"></script>
+    <script src="kernels.js"></script>
+    <script src="main.js"></script>
   </head>
   <body>
-    <main>
-      <img src="logo2.svg" alt="DFINITY logo" />
-      <br />
-      <br />
-      <form action="#">
-        <label for="name">Enter your name: &nbsp;</label>
-        <input id="name" alt="Name" type="text" />
-        <button type="submit">Click Me!</button>
-      </form>
-      <section id="greeting"></section>
-    </main>
+    <h1>WebGPU GPT Model Demo</h1>
+    <p id="webgpuSupportMessage">Checking WebGPU support...</p>
+    <p>
+      <i>PS: Loading models is 5x slower on the web rather than running locally. Just <a href="https://github.com/0hq/WebGPT">clone the repo</a> and open!</i>
+    </p>
+
+    <button id="loadModelButton" onclick="loadModelHandler()" disabled>Load Shakespeare Model</button>
+    <button id="loadGPT2ModelButton" onclick="loadGPT2ModelHandler()" disabled>Load GPT2 Model</button><br />
+    <br />
+    <label for="tokens">Number of tokens:</label>
+    <input type="number" min="1" max="300" value="100" id="tokensInput" disabled />
+    <br /><br />
+    <label for="topK">Top K:</label>
+    <input type="number" min="1" max="100" value="1" id="topKInput" disabled />
+    <br /><br />
+    <label for="temperature">Temperature:</label>
+    <input type="number" step="0.01" min="0.1" max="2" value="1" id="temperatureInput" disabled />
+
+    <br /><br />
+    <textarea id="prompt" rows="5" cols="50" disabled>
+WILL: 
+Ah, how dare you challenge me?
+Have you forgotten I built WebGPT? </textarea
+    >
+    <br />
+    <button id="generateButton" onclick="startGeneration()" disabled>Generate Text</button>
+    <button id="continueButton" onclick="continueGeneration()" disabled>Continue Generation</button>
+    <br /><br />
+    <span id="output" style="white-space: pre"></span>
+    <script>
+      const webgpuSupportMessage = document.getElementById("webgpuSupportMessage");
+      const loadModelButton = document.getElementById("loadModelButton");
+      const loadGPT2ModelButton = document.getElementById("loadGPT2ModelButton");
+
+      const tokensInput = document.getElementById("tokensInput");
+      const generateButton = document.getElementById("generateButton");
+
+      // Check for WebGPU support
+      if (!navigator.gpu) {
+        webgpuSupportMessage.innerHTML =
+          "WebGPU is not supported in your browser yet. Update Chrome to v113 or download Chrome Canary here: <a href='https://www.google.com/chrome/canary/'>https://www.google.com/chrome/canary/</a>";
+        console.error("WebGPU is not supported");
+      } else {
+        webgpuSupportMessage.innerHTML = "WebGPU is supported in your browser!";
+        loadModelButton.disabled = false;
+        loadGPT2ModelButton.disabled = false;
+      }
+
+      async function startGeneration() {
+        setTextareaVisibility(true);
+
+        const prompt = document.getElementById("prompt").value || " ";
+        const numTokens = tokensInput.value;
+
+        const outputDiv = document.getElementById("output");
+        outputDiv.innerHTML = prompt;
+
+        const topK = document.getElementById("topKInput").value;
+        const temperature = document.getElementById("temperatureInput").value;
+        const textStream = generate(prompt, numTokens, 10, topK, temperature);
+
+        for await (const text of textStream) {
+          outputDiv.innerHTML += text;
+        }
+
+        setTextareaVisibility(false);
+        document.getElementById("continueButton").disabled = false;
+      }
+
+      async function loadModelHandler() {
+        loadModelButton.disabled = true;
+        loadGPT2ModelButton.disabled = true;
+        modelParams = await loadModel("better_shakespeare");
+        tokenizer = await loadSimpleTokenizer(); // Sets global tokenizer variable.
+        setTextareaVisibility(false);
+        tokensInput.disabled = false;
+        document.getElementById("topKInput").disabled = false;
+        document.getElementById("temperatureInput").disabled = false;
+        document.getElementById("continueButton").disabled = true;
+      }
+
+      async function loadGPT2ModelHandler() {
+        loadModelButton.disabled = true;
+        loadGPT2ModelButton.disabled = true;
+        modelParams = await loadModel("gpt2");
+        tokenizer = await loadGPT2Tokenizer(); // Sets global tokenizer variable.
+        setTextareaVisibility(false);
+        tokensInput.disabled = false;
+        document.getElementById("topKInput").disabled = false;
+        document.getElementById("temperatureInput").disabled = false;
+        document.getElementById("continueButton").disabled = true;
+
+        // Set the default prompt for GPT2 model
+        const promptTextarea = document.getElementById("prompt");
+        promptTextarea.value = "What is the answer to life, the universe, and everything?\n";
+
+        document.getElementById("topKInput").value = 5;
+        tokensInput.value = 30;
+        document.getElementById("temperatureInput").value = 1;
+      }
+
+      function setTextareaVisibility(bool) {
+        const promptTextarea = document.getElementById("prompt");
+        promptTextarea.disabled = bool;
+        generateButton.disabled = bool;
+      }
+
+      async function continueGeneration() {
+        setTextareaVisibility(true);
+
+        const prompt = document.getElementById("output").innerHTML || " ";
+        const numTokens = tokensInput.value;
+
+        const outputDiv = document.getElementById("output");
+        outputDiv.innerHTML = prompt;
+
+        const topK = document.getElementById("topKInput").value;
+        const temperature = document.getElementById("temperatureInput").value;
+        const textStream = generate(prompt, numTokens, 10, topK, temperature);
+
+        for await (const text of textStream) {
+          outputDiv.innerHTML += text;
+        }
+
+        setTextareaVisibility(false);
+      }
+    </script>
   </body>
 </html>
